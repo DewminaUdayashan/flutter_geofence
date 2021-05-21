@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.os.Build;
 import android.util.Log;
 
@@ -20,15 +21,24 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
+import java.util.ArrayList;
 import java.util.Map;
 
+import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.embedding.engine.FlutterEngineCache;
+import io.flutter.embedding.engine.dart.DartExecutor;
+import io.flutter.embedding.engine.loader.ApplicationInfoLoader;
+import io.flutter.embedding.engine.loader.FlutterApplicationInfo;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.JSONMethodCodec;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.view.FlutterCallbackInformation;
 
 /**
  * FlutterGeofencePlugin
@@ -42,16 +52,19 @@ public class FlutterGeofencePlugin implements FlutterPlugin, MethodCallHandler, 
 
 
     private MethodChannel channel;
-    private Context context;
+    public static Context context;
     public static Activity activity;
+
+    public static Long callback;
+ public static BackgroundHandler backgroundHandler = new BackgroundHandler();
 
     private GeofencingClient geofencingClient;
     private GeofenceHelper geofenceHelper;
 
 
     @SuppressLint("MissingPermission")
-    private void addGeofence(LatLng latLng, float radius) {
-        Geofence geofence = geofenceHelper.getGeofence(GEOFENCE_ID, latLng, radius, Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_DWELL | Geofence.GEOFENCE_TRANSITION_EXIT);
+    private void addGeofence(LatLng latLng, float radius, String geofenceID) {
+        Geofence geofence = geofenceHelper.getGeofence(geofenceID, latLng, radius, Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_DWELL | Geofence.GEOFENCE_TRANSITION_EXIT);
         GeofencingRequest geofencingRequest = geofenceHelper.getGeogencingRequest(geofence);
         PendingIntent pendingIntent = geofenceHelper.getPendingIntent();
         geofencingClient.addGeofences(geofencingRequest, pendingIntent)
@@ -72,6 +85,7 @@ public class FlutterGeofencePlugin implements FlutterPlugin, MethodCallHandler, 
                         Log.d(TAG, "onFailure: " + errorMessage);
                     }
                 });
+
     }
 
 
@@ -105,19 +119,23 @@ public class FlutterGeofencePlugin implements FlutterPlugin, MethodCallHandler, 
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
-        channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "flutter_geofence");
+        channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "plugin.dewz.geofence/geofence");
         channel.setMethodCallHandler(this);
     }
 
+
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
-        final Map<String, Double> arg = call.arguments();
 
         if (call.method.equals("start_geofence")) {
+             ArrayList args = (ArrayList) call.arguments;
+           callback  = (Long) args.get(0);
+            final Map<String, Double> arg = (Map<String, Double>) args.get(1);
             double lat = arg.get("lat");
             double lng = arg.get("lng");
             String radius = String.valueOf(arg.get("radius"));
-            addGeofence(new LatLng(lat, lng), Float.parseFloat(radius)); //lat lng // radius -> float
+            String geofenceID = String.valueOf(arg.get("geofenceID"));
+            addGeofence(new LatLng(lat, lng), Float.parseFloat(radius), geofenceID); //lat lng // radius -> float
             Log.d(TAG, "onMethodCall: Geofence Started");
             result.success("Geofence Started..");
         } else if (call.method.equals("permission")) {

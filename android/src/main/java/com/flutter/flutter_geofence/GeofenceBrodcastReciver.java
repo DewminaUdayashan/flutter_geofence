@@ -39,6 +39,8 @@ public class GeofenceBrodcastReciver extends BroadcastReceiver {
             case Geofence.GEOFENCE_TRANSITION_ENTER:
                 Toast.makeText(context, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show();
                 notificationHelper.sendHighPriorityNotification("GEOFENCE_TRANSITION_ENTER","",FlutterGeofencePlugin.class);
+                BackgroundHandler backgroundHandler = new BackgroundHandler();
+                backgroundHandler.start(context,FlutterGeofencePlugin.callback);
                 break;
             case Geofence.GEOFENCE_TRANSITION_DWELL:
                 Toast.makeText(context, "GEOFENCE_TRANSITION_DWELL", Toast.LENGTH_LONG).show();
